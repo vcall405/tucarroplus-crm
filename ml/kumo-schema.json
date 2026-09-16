@@ -1,0 +1,166 @@
+{
+  "model": "kumo-relational",
+  "task": {
+    "kind": "binary_classification",
+    "target": {
+      "column_name": "converted",
+      "dtype": "bool",
+      "classes": ["false", "true"],
+      "positive_class": "true"
+    },
+    "entity_table_names": ["interactions", "vehicles_viewed", "lead_context"],
+    "anchor_time_column": "created_at"
+  },
+  "schema": {
+    "instance_table": {
+      "name": "leads",
+      "columns": {
+        "lead_id": {
+          "dtype": "int64",
+          "stype": "ID",
+          "nullable": false
+        },
+        "created_at": {
+          "dtype": "timestamp[us]",
+          "stype": "timestamp",
+          "nullable": false
+        },
+        "converted": {
+          "dtype": "bool",
+          "stype": "categorical",
+          "description": "1 if status=vendido, 0 if perdido/dropped"
+        },
+        "days_to_close": {
+          "dtype": "int32",
+          "stype": "numerical",
+          "nullable": true,
+          "description": "Days from creation to vendido/perdido"
+        },
+        "vendor": {
+          "dtype": "string",
+          "stype": "categorical",
+          "nullable": false,
+          "description": "Sales rep who handled the lead"
+        }
+      },
+      "primary_key": "lead_id"
+    },
+    "related_tables": {
+      "interactions": {
+        "name": "interactions",
+        "columns": {
+          "lead_id": {
+            "dtype": "int64",
+            "stype": "ID",
+            "nullable": false
+          },
+          "interaction_date": {
+            "dtype": "timestamp[us]",
+            "stype": "timestamp",
+            "nullable": false
+          },
+          "status_change": {
+            "dtype": "string",
+            "stype": "categorical",
+            "nullable": false,
+            "description": "nuevo → contactado → cita → negociando → vendido"
+          },
+          "days_since_creation": {
+            "dtype": "int32",
+            "stype": "numerical",
+            "nullable": false
+          }
+        },
+        "primary_key": ["lead_id", "interaction_date"]
+      },
+      "vehicles_viewed": {
+        "name": "vehicles_viewed",
+        "columns": {
+          "lead_id": {
+            "dtype": "int64",
+            "stype": "ID",
+            "nullable": false
+          },
+          "vehicle_name": {
+            "dtype": "string",
+            "stype": "categorical",
+            "nullable": false,
+            "description": "Model/year (e.g. 2025 Toyota RAV4)"
+          },
+          "vehicle_price": {
+            "dtype": "float64",
+            "stype": "numerical",
+            "nullable": true,
+            "description": "Estimated price in USD"
+          },
+          "vehicle_type": {
+            "dtype": "string",
+            "stype": "categorical",
+            "nullable": false,
+            "description": "sedan|suv|truck|hybrid|electric"
+          }
+        },
+        "primary_key": ["lead_id", "vehicle_name"]
+      },
+      "lead_context": {
+        "name": "lead_context",
+        "columns": {
+          "lead_id": {
+            "dtype": "int64",
+            "stype": "ID",
+            "nullable": false
+          },
+          "source": {
+            "dtype": "string",
+            "stype": "categorical",
+            "nullable": false,
+            "description": "facebook|whatsapp|llamada|anuncio|prospeccion|referido|showroom"
+          },
+          "campaign": {
+            "dtype": "string",
+            "stype": "categorical",
+            "nullable": true
+          },
+          "is_repeat_contact": {
+            "dtype": "bool",
+            "stype": "categorical",
+            "nullable": false
+          },
+          "phone_validated": {
+            "dtype": "bool",
+            "stype": "categorical",
+            "nullable": false
+          }
+        },
+        "primary_key": "lead_id"
+      }
+    },
+    "relationships": [
+      {
+        "source_columns": ["lead_id"],
+        "target_table": "interactions",
+        "target_columns": ["lead_id"]
+      },
+      {
+        "source_columns": ["lead_id"],
+        "target_table": "vehicles_viewed",
+        "target_columns": ["lead_id"]
+      },
+      {
+        "source_columns": ["lead_id"],
+        "target_table": "lead_context",
+        "target_columns": ["lead_id"]
+      }
+    ]
+  },
+  "output": {
+    "fields": ["prediction", "probabilities"],
+    "description": "Binary classification: will this lead convert (vendido) or not?"
+  },
+  "metadata": {
+    "created_at": "2026-09-16T22:00Z",
+    "version": "1.0",
+    "use_case": "Lead conversion forecasting for automotive dealership in Puerto Rico",
+    "target_metric": "Probability that lead will purchase (status = vendido)"
+  }
+}
