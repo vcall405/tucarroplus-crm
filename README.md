@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Tucarroplus CRM
 
 AI-powered CRM for automotive dealerships in Puerto Rico + NVIDIA Kumo ML predictions for lead conversion forecasting.
@@ -232,3 +233,7 @@ MIT © 2026 VCallGroup | Miguel Fuentes
 **Updated**: September 16, 2026  
 **Maintained by**: Miguel Fuentes (@vcall405)  
 **Region**: Puerto Rico 🇵🇷
+=======
+# tucarroplus-crm
+AI-powered CRM for automotive dealerships + Kumo ML predictions
+>>>>>>> 839134006fb4c94629fe0cafb5e109c073cbe5db
