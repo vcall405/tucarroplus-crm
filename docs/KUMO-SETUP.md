@@ -21,7 +21,7 @@ The GitHub Personal Access Token (for repo management) and the NVIDIA Kumo API k
 
 ```bash
 # Ask Claude to provide from memory:
-# Token: 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
+# Token: (stored securely in Claude memory)
 # Expires: Wed, Dec 15, 2026 (90 days)
 ```
 
@@ -34,7 +34,7 @@ cp .env.example .env
 Edit `.env`:
 
 ```env
-NVIDIA_API_KEY=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
+NVIDIA_API_KEY=nvapi-YOUR_API_KEY_HERE
 NVIDIA_API_URL=https://ai.api.nvidia.com/v1/structured-data/nvidia/kumo-relational/predictions
 ```
 
