@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createLead, deleteLead, fetchLeads, updateLead } from './api.js';
+import LeadBoard from './LeadBoard.jsx';
 import LeadDetail from './LeadDetail.jsx';
 import LeadForm from './LeadForm.jsx';
 import LeadList from './LeadList.jsx';
@@ -32,7 +33,9 @@ export default function Dashboard() {
   const [filter, setFilter] = useState('todos');
   const [sourceFilter, setSourceFilter] = useState('');
   const [query, setQuery] = useState('');
-  const [theme, setTheme] = useState(() => window.localStorage.getItem('tucarroplus-theme') || 'light');
+  const [theme, setTheme] = useState(() => window.localStorage.getItem('tucarroplus-theme') || 'dark');
+  const [vendorFilter, setVendorFilter] = useState('');
+  const [viewMode, setViewMode] = useState(() => window.localStorage.getItem('tucarroplus-view') || 'board');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -62,9 +65,17 @@ export default function Dashboard() {
     window.localStorage.setItem('tucarroplus-theme', theme);
   }, [theme]);
 
+  useEffect(() => {
+    window.localStorage.setItem('tucarroplus-view', viewMode);
+  }, [viewMode]);
+
   const sourceOptions = useMemo(() => (
     [...new Set(leads.map((lead) => lead.source).filter(Boolean))]
       .sort((a, b) => getSourceLabel(a).localeCompare(getSourceLabel(b), 'es'))
+  ), [leads]);
+
+  const vendorOptions = useMemo(() => (
+    [...new Set(leads.map((lead) => lead.vendor).filter(Boolean))].sort((a, b) => a.localeCompare(b, 'es'))
   ), [leads]);
 
   const filtered = useMemo(() => {
@@ -72,10 +83,11 @@ export default function Dashboard() {
       const matchesStatus = filter === 'todos'
         || (filter === 'pendientes' ? isFollowUpPending(lead) : lead.status === filter);
       const matchesSource = !sourceFilter || lead.source === sourceFilter;
+      const matchesVendor = !vendorFilter || lead.vendor === vendorFilter;
       const text = `${lead.name} ${lead.phone} ${lead.vehicle} ${lead.campaign}`.toLowerCase();
-      return matchesStatus && matchesSource && text.includes(query.toLowerCase());
+      return matchesStatus && matchesSource && matchesVendor && text.includes(query.toLowerCase());
     });
-  }, [leads, filter, query, sourceFilter]);
+  }, [leads, filter, query, sourceFilter, vendorFilter]);
 
   const pendingCount = leads.filter(isFollowUpPending).length;
   const selected = filtered.find((lead) => lead.id === selectedId) || filtered[0] || null;
@@ -157,6 +169,10 @@ export default function Dashboard() {
             <option value="">Toda fuente</option>
             {sourceOptions.map((source) => <option key={source} value={source}>{getSourceLabel(source)}</option>)}
           </select>
+          <select aria-label="Filtrar por vendedor" value={vendorFilter} onChange={(event) => setVendorFilter(event.target.value)}>
+            <option value="">Todo vendedor</option>
+            {vendorOptions.map((vendor) => <option key={vendor} value={vendor}>{vendor}</option>)}
+          </select>
           <input
             aria-label="Buscar leads"
             placeholder="Buscar por nombre, telefono o vehiculo"
@@ -174,6 +190,7 @@ export default function Dashboard() {
 
       <section className="metrics">
         <article><span>Total leads</span><strong>{stats.total}</strong></article>
+        <article><span>Pendientes</span><strong>{pendingCount}</strong></article>
         <article><span>Scored</span><strong>{stats.scored}</strong></article>
         <article><span>Score promedio</span><strong>{stats.averageScore}</strong></article>
         <article><span>Alta prioridad</span><strong>{stats.hotLeads}</strong></article>
@@ -202,7 +219,17 @@ export default function Dashboard() {
       {error && <p className="error">{error}</p>}
       {loading ? <p className="loading">Cargando leads...</p> : (
         <section className="workspace">
-          <LeadList leads={filtered} selectedId={selected?.id} onSelect={(lead) => setSelectedId(lead.id)} />
+          <div className="lead-area">
+            <div className="view-toolbar" aria-label="Vista de leads">
+              <button className={viewMode === 'board' ? 'active' : ''} onClick={() => setViewMode('board')}>Tablero</button>
+              <button className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>Tabla</button>
+            </div>
+            {viewMode === 'board' ? (
+              <LeadBoard leads={filtered} selectedId={selected?.id} onSelect={(lead) => setSelectedId(lead.id)} />
+            ) : (
+              <LeadList leads={filtered} selectedId={selected?.id} onSelect={(lead) => setSelectedId(lead.id)} />
+            )}
+          </div>
           {showCreate ? (
             <aside className="detail">
               <LeadForm
