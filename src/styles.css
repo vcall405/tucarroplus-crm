@@ -150,6 +150,18 @@ textarea {
   color: #ffffff;
 }
 
+.filters .followup-filter {
+  border-color: #d99b32;
+  color: #7a5310;
+  font-weight: 800;
+}
+
+.filters .followup-filter.active {
+  background: #7a5310;
+  border-color: #7a5310;
+  color: #ffffff;
+}
+
 .filters span {
   background: rgba(99, 112, 131, 0.14);
   border-radius: 999px;
@@ -204,6 +216,12 @@ td small {
   color: #637083;
   display: block;
   margin-top: 3px;
+}
+
+.next-action {
+  color: #536274;
+  font-size: 0.85rem;
+  font-weight: 700;
 }
 
 .pill {

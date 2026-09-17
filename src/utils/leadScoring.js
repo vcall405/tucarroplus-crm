@@ -1,5 +1,19 @@
 export const STATUS_OPTIONS = ['nuevo', 'contactado', 'cita', 'negociando', 'vendido', 'perdido'];
 
+export function isFollowUpPending(lead) {
+  return !['vendido', 'perdido'].includes(lead.status);
+}
+
+export function getNextAction(lead) {
+  const actions = {
+    nuevo: 'Hacer primer contacto',
+    contactado: 'Dar seguimiento',
+    cita: lead.apptDate ? 'Confirmar cita' : 'Agendar cita',
+    negociando: 'Continuar negociacion'
+  };
+  return actions[lead.status] || 'Revisar lead';
+}
+
 const STATUS_POINTS = {
   nuevo: 10,
   contactado: 24,

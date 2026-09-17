@@ -3,6 +3,7 @@ import { createLead, deleteLead, fetchLeads, updateLead } from './api.js';
 import LeadDetail from './LeadDetail.jsx';
 import LeadForm from './LeadForm.jsx';
 import LeadList from './LeadList.jsx';
+import { isFollowUpPending } from './utils/leadScoring.js';
 
 const statusOrder = ['todos', 'nuevo', 'contactado', 'cita', 'negociando', 'vendido', 'perdido'];
 const emptyLead = { status: 'nuevo', source: 'facebook', vendor: 'Miguel' };
@@ -39,13 +40,15 @@ export default function Dashboard() {
 
   const filtered = useMemo(() => {
     return leads.filter((lead) => {
-      const matchesStatus = filter === 'todos' || lead.status === filter;
+      const matchesStatus = filter === 'todos'
+        || (filter === 'pendientes' ? isFollowUpPending(lead) : lead.status === filter);
       const text = `${lead.name} ${lead.phone} ${lead.vehicle} ${lead.campaign}`.toLowerCase();
       return matchesStatus && text.includes(query.toLowerCase());
     });
   }, [leads, filter, query]);
 
-  const selected = leads.find((lead) => lead.id === selectedId) || filtered[0] || null;
+  const pendingCount = leads.filter(isFollowUpPending).length;
+  const selected = filtered.find((lead) => lead.id === selectedId) || filtered[0] || null;
 
   async function handleSave(payload) {
     setSaving(true);
@@ -119,6 +122,13 @@ export default function Dashboard() {
       </section>
 
       <nav className="filters" aria-label="Filtros de status">
+        <button
+          className={`followup-filter ${filter === 'pendientes' ? 'active' : ''}`}
+          onClick={() => setFilter('pendientes')}
+        >
+          Pendientes por seguimiento
+          <span>{pendingCount}</span>
+        </button>
         {statusOrder.map((status) => (
           <button
             key={status}

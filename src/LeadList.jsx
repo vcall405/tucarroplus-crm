@@ -1,4 +1,5 @@
 import ScoreCard from './ScoreCard.jsx';
+import { getNextAction } from './utils/leadScoring.js';
 
 const statusLabels = {
   nuevo: 'Nuevo',
@@ -19,6 +20,7 @@ export default function LeadList({ leads, selectedId, onSelect }) {
             <th>Vehiculo</th>
             <th>Fuente</th>
             <th>Status</th>
+            <th>Proxima accion</th>
             <th>Score</th>
           </tr>
         </thead>
@@ -38,6 +40,7 @@ export default function LeadList({ leads, selectedId, onSelect }) {
               <td>
                 <span className={`pill ${lead.status}`}>{statusLabels[lead.status] || lead.status}</span>
               </td>
+              <td><span className="next-action">{getNextAction(lead)}</span></td>
               <td><ScoreCard score={lead.score || 0} /></td>
             </tr>
           ))}
