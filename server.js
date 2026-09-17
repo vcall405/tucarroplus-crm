@@ -18,7 +18,7 @@ const allowedOrigins = (process.env.ALLOWED_ORIGIN || 'http://localhost:5173')
   .map((origin) => origin.trim())
   .filter(Boolean);
 const agentToken = process.env.AGENT_API_TOKEN || '';
-const mcpAllowedOrigins = (process.env.MCP_ALLOWED_ORIGINS || 'https://claude.ai,https://claude.com')
+const mcpAllowedOrigins = (process.env.MCP_ALLOWED_ORIGINS || 'https://claude.ai,https://claude.com,https://chatgpt.com,https://chat.openai.com')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
