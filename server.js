@@ -50,6 +50,9 @@ function oauthRedirectIsRegistered(clientId, redirectUri) {
   return Boolean(client && client.redirectUris.includes(redirectUri));
 }
 
+app.use(express.urlencoded({ extended: false }));
+app.use(express.json({ limit: '1mb' }));
+
 app.get('/.well-known/oauth-protected-resource', (req, res) => {
   const resource = `${publicBaseUrl(req)}/mcp`;
   res.json({ resource, authorization_servers: [publicBaseUrl(req)] });
@@ -123,9 +126,6 @@ app.use(cors({
     callback(new Error(`Origin not allowed: ${origin}`));
   }
 }));
-app.use(express.urlencoded({ extended: false }));
-app.use(express.json({ limit: '1mb' }));
-
 function agentAuth(req, res, next) {
   if (!agentToken) {
     res.status(503).json({ error: 'Agent API no configurada: falta AGENT_API_TOKEN en el servidor.' });
