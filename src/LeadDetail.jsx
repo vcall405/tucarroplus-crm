@@ -1,13 +1,13 @@
 import LeadForm from './LeadForm.jsx';
 import ScoreCard from './ScoreCard.jsx';
 
-export default function LeadDetail({ lead, onSave, onDelete, saving, deleting, minimized, onToggleMinimized }) {
+export default function LeadDetail({ lead, onSave, onDelete, saving, deleting, minimized, onToggleMinimized, panelStyle }) {
   if (!lead) {
     return null;
   }
 
   return (
-    <aside className={`detail detail-panel${minimized ? ' minimized' : ''}`} aria-label={`Detalle de ${lead.name}`}>
+    <aside className={`detail detail-panel${minimized ? ' minimized' : ''}`} style={panelStyle} aria-label={`Detalle de ${lead.name}`}>
       <div className="detail-panel-bar">
         <strong className="detail-panel-title">{minimized ? lead.name : 'Detalle del lead'}</strong>
         <button type="button" aria-label={minimized ? 'Expandir detalle' : 'Minimizar detalle'} onClick={onToggleMinimized}>

@@ -420,9 +420,9 @@ td small {
 .detail-panel {
   max-height: min(78vh, 820px);
   overflow: auto;
-  position: absolute;
-  right: 0;
-  top: 44px;
+  position: fixed;
+  right: 28px;
+  top: 180px;
   width: min(400px, calc(100vw - 56px));
   z-index: 5;
   box-shadow: 0 16px 42px rgba(14, 22, 32, 0.3);
@@ -583,8 +583,8 @@ button.danger {
 
   .detail-panel {
     max-height: min(72vh, 700px);
-    right: 0;
-    top: 42px;
+    right: 18px;
+    top: 120px;
     width: min(390px, calc(100vw - 36px));
   }
 }
@@ -598,8 +598,8 @@ button.danger {
 
   .detail-panel {
     max-height: 72vh;
-    right: 0;
-    top: 40px;
+    right: 12px;
+    top: 100px;
     width: calc(100vw - 36px);
   }
 

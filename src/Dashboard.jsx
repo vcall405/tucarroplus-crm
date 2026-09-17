@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState({ total: 0, scored: 0, averageScore: 0, hotLeads: 0, byStatus: {} });
   const [selectedId, setSelectedId] = useState('');
   const [detailMinimized, setDetailMinimized] = useState(false);
+  const [detailPosition, setDetailPosition] = useState(null);
   const [filter, setFilter] = useState('todos');
   const [sourceFilter, setSourceFilter] = useState('');
   const [query, setQuery] = useState('');
@@ -91,7 +92,46 @@ export default function Dashboard() {
   }, [leads, filter, query, sourceFilter, vendorFilter]);
 
   const pendingCount = leads.filter(isFollowUpPending).length;
-  const selected = filtered.find((lead) => lead.id === selectedId) || filtered[0] || null;
+  const selected = filtered.find((lead) => lead.id === selectedId) || null;
+
+  useEffect(() => {
+    if (!selected || showCreate) {
+      setDetailPosition(null);
+      return undefined;
+    }
+
+    const positionPanel = () => {
+      const anchor = document.querySelector('.lead-card.selected, tr.selected');
+      const panel = document.querySelector('.detail-panel');
+      if (!anchor || !panel) return;
+
+      const anchorRect = anchor.getBoundingClientRect();
+      const panelRect = panel.getBoundingClientRect();
+      const gap = 12;
+      const margin = 12;
+      const fitsRight = window.innerWidth - anchorRect.right >= panelRect.width + gap + margin;
+      const fitsLeft = anchorRect.left >= panelRect.width + gap + margin;
+      let left;
+      if (fitsRight || (!fitsLeft && window.innerWidth - anchorRect.right >= anchorRect.left)) {
+        left = anchorRect.right + gap;
+      } else {
+        left = anchorRect.left - panelRect.width - gap;
+      }
+      left = Math.max(margin, Math.min(left, window.innerWidth - panelRect.width - margin));
+
+      const top = Math.max(margin, Math.min(anchorRect.top, window.innerHeight - panelRect.height - margin));
+      setDetailPosition({ left, top });
+    };
+
+    const frame = window.requestAnimationFrame(positionPanel);
+    window.addEventListener('resize', positionPanel);
+    window.addEventListener('scroll', positionPanel, true);
+    return () => {
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener('resize', positionPanel);
+      window.removeEventListener('scroll', positionPanel, true);
+    };
+  }, [selected?.id, detailMinimized, showCreate, viewMode, filter, sourceFilter, vendorFilter, query]);
 
   function exportCsv() {
     const headers = ['Nombre', 'Telefono', 'Email', 'Vehiculo', 'Fuente', 'Status', 'Proxima accion', 'Score', 'Notas'];
@@ -259,6 +299,7 @@ export default function Dashboard() {
               deleting={deleting}
               minimized={detailMinimized}
               onToggleMinimized={() => setDetailMinimized((value) => !value)}
+              panelStyle={detailPosition ? { left: detailPosition.left, top: detailPosition.top, right: 'auto' } : undefined}
             />
           ) : null}
         </section>
