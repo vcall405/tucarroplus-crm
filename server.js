@@ -23,6 +23,96 @@ const mcpAllowedOrigins = (process.env.MCP_ALLOWED_ORIGINS || 'https://claude.ai
   .map((origin) => origin.trim())
   .filter(Boolean);
 
+const oauthCodes = new Map();
+const oauthTokens = new Map();
+const oauthClients = new Map();
+const oauthCodeTtlMs = 5 * 60 * 1000;
+const oauthTokenTtlMs = 60 * 60 * 1000;
+
+function publicBaseUrl(req) {
+  const protocol = req.get('x-forwarded-proto')?.split(',')[0] || req.protocol;
+  return `${protocol}://${req.get('host')}`;
+}
+
+function timingSafeEqualText(left, right) {
+  if (!left || !right || left.length !== right.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(left), Buffer.from(right));
+}
+
+function cleanupOAuth() {
+  const now = Date.now();
+  for (const [key, value] of oauthCodes) if (value.expiresAt <= now) oauthCodes.delete(key);
+  for (const [key, value] of oauthTokens) if (value.expiresAt <= now) oauthTokens.delete(key);
+}
+
+function oauthRedirectIsRegistered(clientId, redirectUri) {
+  const client = oauthClients.get(clientId);
+  return Boolean(client && client.redirectUris.includes(redirectUri));
+}
+
+app.get('/.well-known/oauth-protected-resource', (req, res) => {
+  const resource = `${publicBaseUrl(req)}/mcp`;
+  res.json({ resource, authorization_servers: [publicBaseUrl(req)] });
+});
+
+app.get('/.well-known/oauth-authorization-server', (req, res) => {
+  const base = publicBaseUrl(req);
+  res.json({
+    issuer: base,
+    authorization_endpoint: `${base}/oauth/authorize`,
+    token_endpoint: `${base}/oauth/token`,
+    registration_endpoint: `${base}/oauth/register`,
+    response_types_supported: ['code'],
+    grant_types_supported: ['authorization_code'],
+    code_challenge_methods_supported: ['S256'],
+    token_endpoint_auth_methods_supported: ['none']
+  });
+});
+
+app.post('/oauth/register', (req, res) => {
+  const redirectUris = Array.isArray(req.body?.redirect_uris) ? req.body.redirect_uris : [];
+  if (!redirectUris.length || redirectUris.some((uri) => typeof uri !== 'string' || !uri.startsWith('https://'))) {
+    return res.status(400).json({ error: 'invalid_client_metadata', error_description: 'redirect_uris HTTPS requeridos.' });
+  }
+  const clientId = `tucarroplus-${crypto.randomBytes(16).toString('hex')}`;
+  oauthClients.set(clientId, { redirectUris, clientName: req.body.client_name || 'MCP client' });
+  res.status(201).json({ client_id: clientId, client_name: req.body.client_name || 'MCP client', redirect_uris: redirectUris, token_endpoint_auth_method: 'none' });
+});
+
+app.get('/oauth/authorize', (req, res) => {
+  const { client_id: clientId, redirect_uri: redirectUri, response_type: responseType, state = '', code_challenge: codeChallenge, code_challenge_method: codeChallengeMethod } = req.query;
+  if (responseType !== 'code' || !oauthRedirectIsRegistered(clientId, redirectUri) || !codeChallenge || codeChallengeMethod !== 'S256') {
+    return res.status(400).send('Solicitud OAuth inválida.');
+  }
+  const escaped = (value) => String(value).replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+  res.type('html').send(`<!doctype html><meta charset="utf-8"><title>Autorizar Tucarroplus CRM</title><style>body{font:16px system-ui;max-width:480px;margin:60px auto;padding:24px;background:#111;color:#eee}input,button{font:inherit;padding:12px;width:100%;box-sizing:border-box;margin-top:8px}button{background:#2bbfa8;color:#071b19;border:0;font-weight:700;cursor:pointer}</style><h1>Autorizar Tucarroplus CRM</h1><p>ChatGPT solicita acceso a tus leads y estadísticas.</p><form method="post" action="/oauth/authorize"><input type="hidden" name="client_id" value="${escaped(clientId)}"><input type="hidden" name="redirect_uri" value="${escaped(redirectUri)}"><input type="hidden" name="state" value="${escaped(state)}"><input type="hidden" name="code_challenge" value="${escaped(codeChallenge)}"><label>Token de agente de Railway<input type="password" name="agent_token" required autocomplete="off"></label><button type="submit">Autorizar acceso</button></form>`);
+});
+
+app.post('/oauth/authorize', (req, res) => {
+  const { client_id: clientId, redirect_uri: redirectUri, state = '', code_challenge: codeChallenge, agent_token: providedToken } = req.body || {};
+  if (!oauthRedirectIsRegistered(clientId, redirectUri) || !codeChallenge || !timingSafeEqualText(providedToken, agentToken)) return res.status(401).send('Token inválido o solicitud OAuth no registrada.');
+  cleanupOAuth();
+  const code = crypto.randomBytes(32).toString('base64url');
+  oauthCodes.set(code, { clientId, redirectUri, codeChallenge, expiresAt: Date.now() + oauthCodeTtlMs });
+  const target = new URL(redirectUri);
+  target.searchParams.set('code', code);
+  if (state) target.searchParams.set('state', state);
+  res.redirect(target.toString());
+});
+
+app.post('/oauth/token', (req, res) => {
+  cleanupOAuth();
+  const { grant_type: grantType, code, redirect_uri: redirectUri, client_id: clientId, code_verifier: codeVerifier } = req.body || {};
+  const stored = oauthCodes.get(code);
+  if (grantType !== 'authorization_code' || !stored || stored.clientId !== clientId || stored.redirectUri !== redirectUri || !codeVerifier) return res.status(400).json({ error: 'invalid_grant' });
+  const challenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url');
+  if (!timingSafeEqualText(challenge, stored.codeChallenge)) return res.status(400).json({ error: 'invalid_grant' });
+  oauthCodes.delete(code);
+  const accessToken = crypto.randomBytes(32).toString('base64url');
+  oauthTokens.set(accessToken, { clientId, expiresAt: Date.now() + oauthTokenTtlMs });
+  res.json({ access_token: accessToken, token_type: 'Bearer', expires_in: oauthTokenTtlMs / 1000 });
+});
+
 app.use(cors({
   origin(origin, callback) {
     const isVercelPreview = origin && new URL(origin).hostname.endsWith('.vercel.app');
@@ -33,6 +123,7 @@ app.use(cors({
     callback(new Error(`Origin not allowed: ${origin}`));
   }
 }));
+app.use(express.urlencoded({ extended: false }));
 app.use(express.json({ limit: '1mb' }));
 
 function agentAuth(req, res, next) {
@@ -41,8 +132,8 @@ function agentAuth(req, res, next) {
     return;
   }
   const provided = req.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
-  const valid = provided.length === agentToken.length
-    && crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(agentToken));
+  cleanupOAuth();
+  const valid = timingSafeEqualText(provided, agentToken) || oauthTokens.has(provided);
   if (!valid) {
     res.status(401).json({ error: 'Token de agente inválido o ausente.' });
     return;
