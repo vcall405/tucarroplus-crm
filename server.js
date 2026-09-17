@@ -50,6 +50,15 @@ function oauthRedirectIsRegistered(clientId, redirectUri) {
   return Boolean(client && client.redirectUris.includes(redirectUri));
 }
 
+function isOpenAiRedirect(redirectUri) {
+  try {
+    const url = new URL(redirectUri);
+    return url.protocol === 'https:' && (url.hostname === 'chatgpt.com' || url.hostname.endsWith('.chatgpt.com') || url.hostname === 'openai.com' || url.hostname.endsWith('.openai.com'));
+  } catch {
+    return false;
+  }
+}
+
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json({ limit: '1mb' }));
 
@@ -87,6 +96,9 @@ app.post('/oauth/register', (req, res) => {
 
 app.get('/oauth/authorize', (req, res) => {
   const { client_id: clientId, redirect_uri: redirectUri, response_type: responseType, state = '', code_challenge: codeChallenge, code_challenge_method: codeChallengeMethod } = req.query;
+  if (clientId && !oauthRedirectIsRegistered(clientId, redirectUri) && isOpenAiRedirect(redirectUri)) {
+    oauthClients.set(clientId, { redirectUris: [redirectUri], clientName: 'ChatGPT' });
+  }
   if (responseType !== 'code' || !oauthRedirectIsRegistered(clientId, redirectUri) || !codeChallenge || codeChallengeMethod !== 'S256') {
     return res.status(400).send('Solicitud OAuth inválida.');
   }
