@@ -63,3 +63,37 @@ export async function updateLead(id, payload) {
   window.localStorage.setItem(STORAGE_KEY, JSON.stringify(nextLeads));
   return { lead: nextLeads.find((lead) => lead.id === id), webhook: { forwarded: false }, mode: 'browser-local' };
 }
+
+export async function createLead(payload) {
+  try {
+    const { data } = await api.post('/api/leads', payload);
+    if (data?.lead) return data;
+  } catch {
+    // Fallback to browser-local persistence.
+  }
+
+  const leads = readLocalLeads();
+  const now = new Date().toISOString();
+  const lead = scoreLeadRecord(normalizeLead({
+    ...payload,
+    id: payload.id || `tcp-${Date.now()}`,
+    createdAt: now,
+    updatedAt: now
+  }, leads.length));
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify([...leads, lead]));
+  return { lead, mode: 'browser-local' };
+}
+
+export async function deleteLead(id) {
+  try {
+    const { data } = await api.delete(`/api/leads/${id}`);
+    if (data?.ok) return data;
+  } catch {
+    // Fallback to browser-local persistence.
+  }
+
+  const leads = readLocalLeads();
+  const lead = leads.find((item) => item.id === id);
+  window.localStorage.setItem(STORAGE_KEY, JSON.stringify(leads.filter((item) => item.id !== id)));
+  return { ok: Boolean(lead), lead, mode: 'browser-local' };
+}

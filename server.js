@@ -4,7 +4,7 @@ import cors from 'cors';
 import axios from 'axios';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { getLeadStats, readLeads, updateLead } from './src/utils/leadStore.js';
+import { createLead, deleteLead, getLeadStats, readLeads, updateLead } from './src/utils/leadStore.js';
 import { scoreLeadRecord } from './src/utils/leadScoring.js';
 
 const app = express();
@@ -64,6 +64,11 @@ app.get('/api/leads/:id', async (req, res) => {
   res.json({ lead });
 });
 
+app.post('/api/leads', async (req, res) => {
+  const lead = await createLead(req.body || {});
+  res.status(201).json({ lead });
+});
+
 app.patch('/api/leads/:id', async (req, res) => {
   const result = await updateLead(req.params.id, req.body);
   if (!result) {
@@ -81,6 +86,15 @@ app.patch('/api/leads/:id', async (req, res) => {
   });
 
   res.json({ lead: result.lead, webhook: webhookResult });
+});
+
+app.delete('/api/leads/:id', async (req, res) => {
+  const lead = await deleteLead(req.params.id);
+  if (!lead) {
+    res.status(404).json({ error: 'Lead no encontrado' });
+    return;
+  }
+  res.json({ ok: true, lead });
 });
 
 app.post('/api/score', async (req, res) => {

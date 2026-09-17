@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { fetchLeads, updateLead } from './api.js';
+import { createLead, deleteLead, fetchLeads, updateLead } from './api.js';
 import LeadDetail from './LeadDetail.jsx';
+import LeadForm from './LeadForm.jsx';
 import LeadList from './LeadList.jsx';
 
 const statusOrder = ['todos', 'nuevo', 'contactado', 'cita', 'negociando', 'vendido', 'perdido'];
+const emptyLead = { status: 'nuevo', source: 'facebook', vendor: 'Miguel' };
 
 export default function Dashboard() {
   const [leads, setLeads] = useState([]);
@@ -13,6 +15,8 @@ export default function Dashboard() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
   const [error, setError] = useState('');
 
   async function load() {
@@ -50,8 +54,41 @@ export default function Dashboard() {
       setLeads((current) => current.map((lead) => lead.id === data.lead.id ? data.lead : lead));
       setSelectedId(data.lead.id);
       await load();
+      setError('');
+    } catch {
+      setError('No se pudo guardar el lead.');
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function handleCreate(payload) {
+    setSaving(true);
+    try {
+      const data = await createLead(payload);
+      setShowCreate(false);
+      setSelectedId(data.lead.id);
+      await load();
+      setError('');
+    } catch {
+      setError('No se pudo crear el lead.');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function handleDelete(lead) {
+    if (!window.confirm(`¿Eliminar a ${lead.name}? Esta acción no se puede deshacer.`)) return;
+    setDeleting(true);
+    try {
+      await deleteLead(lead.id);
+      setSelectedId('');
+      await load();
+      setError('');
+    } catch {
+      setError('No se pudo eliminar el lead.');
+    } finally {
+      setDeleting(false);
     }
   }
 
@@ -69,6 +106,7 @@ export default function Dashboard() {
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
+          <button onClick={() => setShowCreate(true)}>+ Nuevo lead</button>
           <button onClick={load}>Refrescar</button>
         </div>
       </header>
@@ -97,7 +135,19 @@ export default function Dashboard() {
       {loading ? <p className="loading">Cargando leads...</p> : (
         <section className="workspace">
           <LeadList leads={filtered} selectedId={selected?.id} onSelect={(lead) => setSelectedId(lead.id)} />
-          <LeadDetail lead={selected} onSave={handleSave} saving={saving} />
+          {showCreate ? (
+            <aside className="detail">
+              <LeadForm
+                isNew
+                lead={emptyLead}
+                onSave={handleCreate}
+                onCancel={() => setShowCreate(false)}
+                saving={saving}
+              />
+            </aside>
+          ) : (
+            <LeadDetail lead={selected} onSave={handleSave} onDelete={handleDelete} saving={saving} deleting={deleting} />
+          )}
         </section>
       )}
     </main>

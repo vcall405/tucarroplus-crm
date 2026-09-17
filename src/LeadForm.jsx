@@ -10,8 +10,8 @@ const statusLabels = {
   perdido: 'Perdido'
 };
 
-export default function LeadForm({ lead, onSave, saving }) {
-  const [form, setForm] = useState(lead);
+export default function LeadForm({ lead, onSave, onCancel, saving, isNew = false }) {
+  const [form, setForm] = useState(lead || {});
 
   useEffect(() => {
     setForm(lead);
@@ -26,6 +26,38 @@ export default function LeadForm({ lead, onSave, saving }) {
       event.preventDefault();
       onSave(form);
     }}>
+      {isNew && <h3>Nuevo lead</h3>}
+
+      <label>
+        Nombre
+        <input required value={form.name || ''} onChange={(event) => setField('name', event.target.value)} />
+      </label>
+
+      <label>
+        Telefono
+        <input value={form.phone || ''} onChange={(event) => setField('phone', event.target.value)} />
+      </label>
+
+      <label>
+        Email
+        <input type="email" value={form.email || ''} onChange={(event) => setField('email', event.target.value)} />
+      </label>
+
+      <label>
+        Vehiculo
+        <input value={form.vehicle || ''} onChange={(event) => setField('vehicle', event.target.value)} />
+      </label>
+
+      <label>
+        Fuente
+        <input value={form.source || ''} onChange={(event) => setField('source', event.target.value)} />
+      </label>
+
+      <label>
+        Campana
+        <input value={form.campaign || ''} onChange={(event) => setField('campaign', event.target.value)} />
+      </label>
+
       <label>
         Status
         <select value={form.status} onChange={(event) => setField('status', event.target.value)}>
@@ -62,7 +94,8 @@ export default function LeadForm({ lead, onSave, saving }) {
         <textarea value={form.notes || ''} onChange={(event) => setField('notes', event.target.value)} rows="5" />
       </label>
 
-      <button type="submit" disabled={saving}>{saving ? 'Guardando...' : 'Actualizar lead'}</button>
+      <button type="submit" disabled={saving}>{saving ? 'Guardando...' : isNew ? 'Crear lead' : 'Guardar cambios'}</button>
+      {isNew && <button type="button" className="secondary" onClick={onCancel}>Cancelar</button>}
     </form>
   );
 }

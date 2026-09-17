@@ -61,6 +61,28 @@ export async function updateLead(id, patch) {
   return { previous, lead: next };
 }
 
+export async function createLead(input = {}) {
+  const leads = await readLeads();
+  const now = new Date().toISOString();
+  const lead = scoreLeadRecord(normalizeLead({
+    ...input,
+    id: input.id || `tcp-${Date.now()}`,
+    createdAt: now,
+    updatedAt: now
+  }, leads.length));
+  await writeLeads([...leads, lead]);
+  return lead;
+}
+
+export async function deleteLead(id) {
+  const leads = await readLeads();
+  const index = leads.findIndex((lead) => lead.id === id);
+  if (index === -1) return null;
+  const [deleted] = leads.splice(index, 1);
+  await writeLeads(leads);
+  return deleted;
+}
+
 export function getLeadStats(leads) {
   const total = leads.length;
   const byStatus = leads.reduce((acc, lead) => {

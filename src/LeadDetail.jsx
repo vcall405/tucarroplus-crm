@@ -1,7 +1,7 @@
 import LeadForm from './LeadForm.jsx';
 import ScoreCard from './ScoreCard.jsx';
 
-export default function LeadDetail({ lead, onSave, saving }) {
+export default function LeadDetail({ lead, onSave, onDelete, saving, deleting }) {
   if (!lead) {
     return (
       <aside className="detail empty">
@@ -30,6 +30,9 @@ export default function LeadDetail({ lead, onSave, saving }) {
       </dl>
 
       <LeadForm lead={lead} onSave={onSave} saving={saving} />
+      <button className="danger" type="button" onClick={() => onDelete(lead)} disabled={deleting}>
+        {deleting ? 'Eliminando...' : 'Eliminar lead'}
+      </button>
     </aside>
   );
 }
