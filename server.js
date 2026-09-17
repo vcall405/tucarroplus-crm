@@ -53,10 +53,13 @@ function oauthRedirectIsRegistered(clientId, redirectUri) {
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json({ limit: '1mb' }));
 
-app.get('/.well-known/oauth-protected-resource', (req, res) => {
+function protectedResourceMetadata(req, res) {
   const resource = `${publicBaseUrl(req)}/mcp`;
   res.json({ resource, authorization_servers: [publicBaseUrl(req)] });
-});
+}
+
+app.get('/.well-known/oauth-protected-resource', protectedResourceMetadata);
+app.get('/.well-known/oauth-protected-resource/mcp', protectedResourceMetadata);
 
 app.get('/.well-known/oauth-authorization-server', (req, res) => {
   const base = publicBaseUrl(req);
@@ -135,6 +138,7 @@ function agentAuth(req, res, next) {
   cleanupOAuth();
   const valid = timingSafeEqualText(provided, agentToken) || oauthTokens.has(provided);
   if (!valid) {
+    res.set('WWW-Authenticate', `Bearer resource_metadata="${publicBaseUrl(req)}/.well-known/oauth-protected-resource/mcp"`);
     res.status(401).json({ error: 'Token de agente inválido o ausente.' });
     return;
   }
