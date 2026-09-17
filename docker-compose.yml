@@ -1,0 +1,26 @@
+services:
+  api:
+    build: .
+    command: npm start
+    environment:
+      NODE_ENV: production
+      PORT: 3001
+      DATA_FILE: /app/ml/data/leads.json
+      ALLOWED_ORIGIN: http://localhost:5173,http://localhost:8080
+    ports:
+      - "3001:3001"
+    volumes:
+      - ./ml/data:/app/ml/data
+
+  web:
+    image: node:22-alpine
+    working_dir: /app
+    command: sh -c "npm ci && npm run build && npm run preview -- --host 0.0.0.0 --port 8080"
+    environment:
+      VITE_API_URL: http://localhost:3001
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+    depends_on:
+      - api
