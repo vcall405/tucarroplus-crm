@@ -16,3 +16,4 @@ build/
 firebase-debug.log
 .credentials
 .git-credentials
+.vercel
