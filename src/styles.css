@@ -89,6 +89,14 @@ h2 {
   min-width: 320px;
 }
 
+.actions select {
+  min-width: 150px;
+}
+
+.theme-toggle {
+  min-width: 112px;
+}
+
 input,
 select,
 textarea {
@@ -418,4 +426,117 @@ button.danger {
   .lead-form {
     grid-template-columns: 1fr;
   }
+}
+
+html[data-theme="dark"] {
+  background: #121820;
+  color-scheme: dark;
+}
+
+html[data-theme="dark"] body {
+  background: #121820;
+  color: #edf2f7;
+}
+
+html[data-theme="dark"] button,
+html[data-theme="dark"] input,
+html[data-theme="dark"] select,
+html[data-theme="dark"] textarea {
+  background: #1c2530;
+  border-color: #3b4a5a;
+  color: #edf2f7;
+}
+
+html[data-theme="dark"] button:hover {
+  border-color: #8295aa;
+}
+
+html[data-theme="dark"] .eyebrow,
+html[data-theme="dark"] .metrics span,
+html[data-theme="dark"] th,
+html[data-theme="dark"] td small,
+html[data-theme="dark"] .score small,
+html[data-theme="dark"] .facts dt,
+html[data-theme="dark"] .detail-head p,
+html[data-theme="dark"] .next-action {
+  color: #aebdca;
+}
+
+html[data-theme="dark"] .metrics article,
+html[data-theme="dark"] .table-wrap,
+html[data-theme="dark"] .detail,
+html[data-theme="dark"] .error,
+html[data-theme="dark"] .loading {
+  background: #18212b;
+  border-color: #334252;
+}
+
+html[data-theme="dark"] th,
+html[data-theme="dark"] td {
+  border-color: #2b3947;
+}
+
+html[data-theme="dark"] tbody tr:hover,
+html[data-theme="dark"] tbody tr.selected {
+  background: #20372f;
+}
+
+html[data-theme="dark"] .facts div {
+  background: #202b37;
+}
+
+html[data-theme="dark"] .score-ring,
+html[data-theme="dark"] .score-high .score-ring,
+html[data-theme="dark"] .score-medium .score-ring,
+html[data-theme="dark"] .score-low .score-ring {
+  background:
+    radial-gradient(circle at center, #18212b 58%, transparent 60%),
+    conic-gradient(#1f8a70 var(--score), #334252 0);
+}
+
+html[data-theme="dark"] .score-high .score-ring {
+  background:
+    radial-gradient(circle at center, #18212b 58%, transparent 60%),
+    conic-gradient(#4ade80 var(--score), #334252 0);
+}
+
+html[data-theme="dark"] .score-medium .score-ring {
+  background:
+    radial-gradient(circle at center, #18212b 58%, transparent 60%),
+    conic-gradient(#f2b84b var(--score), #334252 0);
+}
+
+html[data-theme="dark"] .score-low .score-ring {
+  background:
+    radial-gradient(circle at center, #18212b 58%, transparent 60%),
+    conic-gradient(#f07c73 var(--score), #334252 0);
+}
+
+html[data-theme="dark"] .pill.nuevo { background: #303a46; color: #d8e1ea; }
+html[data-theme="dark"] .pill.contactado { background: #23455b; color: #bfe2f8; }
+html[data-theme="dark"] .pill.cita { background: #2d5135; color: #c7edc2; }
+html[data-theme="dark"] .pill.negociando { background: #5c481c; color: #ffe3a2; }
+html[data-theme="dark"] .pill.vendido { background: #205239; color: #b7f0cf; }
+html[data-theme="dark"] .pill.perdido { background: #5b2f31; color: #ffc4c0; }
+
+html[data-theme="dark"] .filters button.active {
+  background: #edf2f7;
+  border-color: #edf2f7;
+  color: #17202a;
+}
+
+html[data-theme="dark"] .filters .followup-filter.active {
+  background: #d99b32;
+  border-color: #d99b32;
+  color: #17202a;
+}
+
+html[data-theme="dark"] .lead-form button {
+  background: #239b7d;
+  border-color: #239b7d;
+}
+
+html[data-theme="dark"] button.secondary {
+  background: #1c2530;
+  color: #edf2f7;
 }

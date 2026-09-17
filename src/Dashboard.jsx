@@ -3,17 +3,36 @@ import { createLead, deleteLead, fetchLeads, updateLead } from './api.js';
 import LeadDetail from './LeadDetail.jsx';
 import LeadForm from './LeadForm.jsx';
 import LeadList from './LeadList.jsx';
-import { isFollowUpPending } from './utils/leadScoring.js';
+import { getNextAction, isFollowUpPending } from './utils/leadScoring.js';
 
 const statusOrder = ['todos', 'nuevo', 'contactado', 'cita', 'negociando', 'vendido', 'perdido'];
 const emptyLead = { status: 'nuevo', source: 'facebook', vendor: 'Miguel' };
+const sourceLabels = {
+  anuncio: 'Anuncio pagado',
+  facebook: 'Facebook organico',
+  whatsapp: 'WhatsApp',
+  llamada: 'Llamada',
+  prospeccion: 'Prospeccion telefonica',
+  referido: 'Referido',
+  showroom: 'Showroom'
+};
+
+function getSourceLabel(source) {
+  return sourceLabels[source] || source || 'Sin fuente';
+}
+
+function escapeCsv(value) {
+  return `"${String(value ?? '').replaceAll('"', '""')}"`;
+}
 
 export default function Dashboard() {
   const [leads, setLeads] = useState([]);
   const [stats, setStats] = useState({ total: 0, scored: 0, averageScore: 0, hotLeads: 0, byStatus: {} });
   const [selectedId, setSelectedId] = useState('');
   const [filter, setFilter] = useState('todos');
+  const [sourceFilter, setSourceFilter] = useState('');
   const [query, setQuery] = useState('');
+  const [theme, setTheme] = useState(() => window.localStorage.getItem('tucarroplus-theme') || 'light');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -38,17 +57,44 @@ export default function Dashboard() {
     load();
   }, []);
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    window.localStorage.setItem('tucarroplus-theme', theme);
+  }, [theme]);
+
+  const sourceOptions = useMemo(() => (
+    [...new Set(leads.map((lead) => lead.source).filter(Boolean))]
+      .sort((a, b) => getSourceLabel(a).localeCompare(getSourceLabel(b), 'es'))
+  ), [leads]);
+
   const filtered = useMemo(() => {
     return leads.filter((lead) => {
       const matchesStatus = filter === 'todos'
         || (filter === 'pendientes' ? isFollowUpPending(lead) : lead.status === filter);
+      const matchesSource = !sourceFilter || lead.source === sourceFilter;
       const text = `${lead.name} ${lead.phone} ${lead.vehicle} ${lead.campaign}`.toLowerCase();
-      return matchesStatus && text.includes(query.toLowerCase());
+      return matchesStatus && matchesSource && text.includes(query.toLowerCase());
     });
-  }, [leads, filter, query]);
+  }, [leads, filter, query, sourceFilter]);
 
   const pendingCount = leads.filter(isFollowUpPending).length;
   const selected = filtered.find((lead) => lead.id === selectedId) || filtered[0] || null;
+
+  function exportCsv() {
+    const headers = ['Nombre', 'Telefono', 'Email', 'Vehiculo', 'Fuente', 'Status', 'Proxima accion', 'Score', 'Notas'];
+    const rows = filtered.map((lead) => [
+      lead.name, lead.phone, lead.email, lead.vehicle, getSourceLabel(lead.source), lead.status,
+      getNextAction(lead),
+      lead.score, lead.notes
+    ]);
+    const csv = [headers, ...rows].map((row) => row.map(escapeCsv).join(',')).join('\n');
+    const url = URL.createObjectURL(new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'tucarroplus-leads.csv';
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   async function handleSave(payload) {
     setSaving(true);
@@ -103,14 +149,26 @@ export default function Dashboard() {
           <h1>CRM de leads</h1>
         </div>
         <div className="actions">
+          <select
+            aria-label="Filtrar por fuente"
+            value={sourceFilter}
+            onChange={(event) => setSourceFilter(event.target.value)}
+          >
+            <option value="">Toda fuente</option>
+            {sourceOptions.map((source) => <option key={source} value={source}>{getSourceLabel(source)}</option>)}
+          </select>
           <input
             aria-label="Buscar leads"
             placeholder="Buscar por nombre, telefono o vehiculo"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
+          <button onClick={exportCsv}>Exportar CSV</button>
           <button onClick={() => setShowCreate(true)}>+ Nuevo lead</button>
           <button onClick={load}>Refrescar</button>
+          <button className="theme-toggle" onClick={() => setTheme((current) => current === 'dark' ? 'light' : 'dark')}>
+            {theme === 'dark' ? 'Modo claro' : 'Modo oscuro'}
+          </button>
         </div>
       </header>
 
