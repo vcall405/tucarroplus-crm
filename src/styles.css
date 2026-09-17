@@ -178,10 +178,8 @@ textarea {
 }
 
 .workspace {
-  align-items: start;
-  display: grid;
-  gap: 18px;
-  grid-template-columns: minmax(0, 1fr) 420px;
+  min-width: 0;
+  position: relative;
 }
 
 .lead-area {
@@ -417,8 +415,49 @@ td small {
   border: 1px solid #d9dee7;
   border-radius: 8px;
   padding: 18px;
-  position: sticky;
-  top: 18px;
+}
+
+.detail-panel {
+  max-height: min(78vh, 820px);
+  overflow: auto;
+  position: absolute;
+  right: 0;
+  top: 44px;
+  width: min(400px, calc(100vw - 56px));
+  z-index: 5;
+  box-shadow: 0 16px 42px rgba(14, 22, 32, 0.3);
+}
+
+.detail-panel-bar {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  margin: -5px -5px 14px;
+}
+
+.detail-panel-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail-panel-bar button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  padding: 0 10px;
+}
+
+.detail-panel.minimized {
+  max-height: none;
+  overflow: hidden;
+  padding: 10px 12px;
+  width: min(320px, calc(100vw - 32px));
+}
+
+.detail-panel.minimized .detail-panel-bar {
+  margin: 0;
 }
 
 .detail.empty {
@@ -538,16 +577,15 @@ button.danger {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .workspace {
-    grid-template-columns: 1fr;
-  }
-
   .lead-board {
     overflow-x: auto;
   }
 
-  .detail {
-    position: static;
+  .detail-panel {
+    max-height: min(72vh, 700px);
+    right: 0;
+    top: 42px;
+    width: min(390px, calc(100vw - 36px));
   }
 }
 
@@ -556,6 +594,17 @@ button.danger {
   .facts,
   .lead-form {
     grid-template-columns: 1fr;
+  }
+
+  .detail-panel {
+    max-height: 72vh;
+    right: 0;
+    top: 40px;
+    width: calc(100vw - 36px);
+  }
+
+  .detail-panel.minimized {
+    width: min(280px, calc(100vw - 32px));
   }
 }
 

@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [leads, setLeads] = useState([]);
   const [stats, setStats] = useState({ total: 0, scored: 0, averageScore: 0, hotLeads: 0, byStatus: {} });
   const [selectedId, setSelectedId] = useState('');
+  const [detailMinimized, setDetailMinimized] = useState(false);
   const [filter, setFilter] = useState('todos');
   const [sourceFilter, setSourceFilter] = useState('');
   const [query, setQuery] = useState('');
@@ -47,7 +48,7 @@ export default function Dashboard() {
       const data = await fetchLeads();
       setLeads(data.leads);
       setStats(data.stats);
-      setSelectedId((current) => current || data.leads[0]?.id || '');
+      setSelectedId((current) => data.leads.some((lead) => lead.id === current) ? current : '');
       setError('');
     } catch (err) {
       setError('No pude conectar con el servidor del CRM.');
@@ -114,6 +115,7 @@ export default function Dashboard() {
       const data = await updateLead(payload.id, payload);
       setLeads((current) => current.map((lead) => lead.id === data.lead.id ? data.lead : lead));
       setSelectedId(data.lead.id);
+      setDetailMinimized(false);
       await load();
       setError('');
     } catch {
@@ -129,6 +131,7 @@ export default function Dashboard() {
       const data = await createLead(payload);
       setShowCreate(false);
       setSelectedId(data.lead.id);
+      setDetailMinimized(false);
       await load();
       setError('');
     } catch {
@@ -144,6 +147,7 @@ export default function Dashboard() {
     try {
       await deleteLead(lead.id);
       setSelectedId('');
+      setDetailMinimized(false);
       await load();
       setError('');
     } catch {
@@ -225,24 +229,38 @@ export default function Dashboard() {
               <button className={viewMode === 'table' ? 'active' : ''} onClick={() => setViewMode('table')}>Tabla</button>
             </div>
             {viewMode === 'board' ? (
-              <LeadBoard leads={filtered} selectedId={selected?.id} onSelect={(lead) => setSelectedId(lead.id)} />
+              <LeadBoard leads={filtered} selectedId={selected?.id} onSelect={(lead) => { setSelectedId(lead.id); setDetailMinimized(false); }} />
             ) : (
-              <LeadList leads={filtered} selectedId={selected?.id} onSelect={(lead) => setSelectedId(lead.id)} />
+              <LeadList leads={filtered} selectedId={selected?.id} onSelect={(lead) => { setSelectedId(lead.id); setDetailMinimized(false); }} />
             )}
           </div>
           {showCreate ? (
-            <aside className="detail">
-              <LeadForm
+            <aside className={`detail detail-panel${detailMinimized ? ' minimized' : ''}`}>
+              <div className="detail-panel-bar">
+                <strong>Nuevo lead</strong>
+                <button type="button" aria-label={detailMinimized ? 'Expandir panel' : 'Minimizar panel'} onClick={() => setDetailMinimized((value) => !value)}>
+                  {detailMinimized ? 'Expandir' : 'Minimizar'}
+                </button>
+              </div>
+              {!detailMinimized && <LeadForm
                 isNew
                 lead={emptyLead}
                 onSave={handleCreate}
                 onCancel={() => setShowCreate(false)}
                 saving={saving}
-              />
+              />}
             </aside>
-          ) : (
-            <LeadDetail lead={selected} onSave={handleSave} onDelete={handleDelete} saving={saving} deleting={deleting} />
-          )}
+          ) : selected ? (
+            <LeadDetail
+              lead={selected}
+              onSave={handleSave}
+              onDelete={handleDelete}
+              saving={saving}
+              deleting={deleting}
+              minimized={detailMinimized}
+              onToggleMinimized={() => setDetailMinimized((value) => !value)}
+            />
+          ) : null}
         </section>
       )}
     </main>
