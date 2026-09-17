@@ -6,6 +6,7 @@ CRM React + Express para operar leads automotrices de Tucarroplus con scoring au
 
 - UI React lista: dashboard, tabla de leads, detalle, formulario de status y score card.
 - API Express: `/health`, `/api/leads`, `/api/leads/:id`, `/api/score`, `/webhook/lead-update`.
+- API para agentes: REST autenticado en `/agent/*` y MCP remoto en `/mcp`. Ver `docs/AGENT-API.md`.
 - Data: `ml/data/leads.json`.
 - Importador: `npm run import:leads -- leads.json`.
 - Scoring batch: `npm run score:leads`.

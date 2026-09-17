@@ -29,15 +29,17 @@
   "author": "Miguel Fuentes",
   "license": "MIT",
   "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "@vitejs/plugin-react": "^5.0.2",
     "axios": "^1.12.2",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
     "firebase-admin": "^12.7.0",
-    "vite": "^7.1.5",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "vite": "^7.1.5",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "concurrently": "^9.2.1",

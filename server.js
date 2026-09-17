@@ -2,15 +2,23 @@ import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import axios from 'axios';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { createLead, deleteLead, getLeadStats, readLeads, updateLead } from './src/utils/leadStore.js';
 import { scoreLeadRecord } from './src/utils/leadScoring.js';
+import { createMcpServer } from './src/mcpServer.js';
 
 const app = express();
 const port = Number(process.env.PORT || 3001);
 const dirname = path.dirname(fileURLToPath(import.meta.url));
 const allowedOrigins = (process.env.ALLOWED_ORIGIN || 'http://localhost:5173')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const agentToken = process.env.AGENT_API_TOKEN || '';
+const mcpAllowedOrigins = (process.env.MCP_ALLOWED_ORIGINS || 'https://claude.ai,https://claude.com')
   .split(',')
   .map((origin) => origin.trim())
   .filter(Boolean);
@@ -26,6 +34,30 @@ app.use(cors({
   }
 }));
 app.use(express.json({ limit: '1mb' }));
+
+function agentAuth(req, res, next) {
+  if (!agentToken) {
+    res.status(503).json({ error: 'Agent API no configurada: falta AGENT_API_TOKEN en el servidor.' });
+    return;
+  }
+  const provided = req.get('authorization')?.replace(/^Bearer\s+/i, '') || '';
+  const valid = provided.length === agentToken.length
+    && crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(agentToken));
+  if (!valid) {
+    res.status(401).json({ error: 'Token de agente inválido o ausente.' });
+    return;
+  }
+  next();
+}
+
+function validateMcpOrigin(req, res, next) {
+  const origin = req.get('origin');
+  if (origin && !mcpAllowedOrigins.includes(origin)) {
+    res.status(403).json({ error: 'Origen MCP no permitido.' });
+    return;
+  }
+  next();
+}
 
 async function forwardToN8n(payload) {
   if (!process.env.N8N_WEBHOOK_URL) return { forwarded: false };
@@ -45,9 +77,73 @@ app.get('/health', async (_req, res) => {
   res.json({
     ok: true,
     service: process.env.CRM_NAME || 'Tucarroplus CRM',
+    agentApi: Boolean(agentToken),
     stats: getLeadStats(leads)
   });
 });
+
+app.get('/agent/openapi.json', agentAuth, (req, res) => {
+  res.json({
+    openapi: '3.0.3',
+    info: { title: 'Tucarroplus CRM Agent API', version: '1.0.0' },
+    servers: [{ url: `${req.protocol}://${req.get('host')}/agent` }],
+    security: [{ bearerAuth: [] }],
+    paths: {
+      '/leads': { get: { summary: 'Listar leads', parameters: [{ name: 'pending_only', in: 'query', schema: { type: 'boolean' } }, { name: 'status', in: 'query', schema: { type: 'string' } }, { name: 'source', in: 'query', schema: { type: 'string' } }, { name: 'vendor', in: 'query', schema: { type: 'string' } }] }, post: { summary: 'Crear lead' } },
+      '/leads/{id}': { get: { summary: 'Consultar lead' }, patch: { summary: 'Actualizar lead' }, delete: { summary: 'Eliminar lead' } },
+      '/stats': { get: { summary: 'Ver estadísticas' } }
+    },
+    components: { securitySchemes: { bearerAuth: { type: 'http', scheme: 'bearer' } } }
+  });
+});
+
+app.get('/agent/stats', agentAuth, async (_req, res) => {
+  const leads = await readLeads();
+  res.json({ ...getLeadStats(leads), pendingFollowUp: leads.filter((lead) => !['vendido', 'perdido'].includes(lead.status)).length });
+});
+
+app.get('/agent/leads', agentAuth, async (req, res) => {
+  const leads = await readLeads();
+  const filtered = leads.filter((lead) => (!req.query.status || lead.status === req.query.status)
+    && (!req.query.source || lead.source === req.query.source)
+    && (!req.query.vendor || lead.vendor === req.query.vendor)
+    && (req.query.pending_only !== 'true' || !['vendido', 'perdido'].includes(lead.status)));
+  res.json({ leads: filtered, stats: getLeadStats(filtered) });
+});
+
+app.get('/agent/leads/:id', agentAuth, async (req, res) => {
+  const lead = (await readLeads()).find((item) => item.id === req.params.id);
+  if (!lead) return res.status(404).json({ error: 'Lead no encontrado' });
+  res.json({ lead });
+});
+
+app.post('/agent/leads', agentAuth, async (req, res) => {
+  res.status(201).json({ lead: await createLead(req.body || {}) });
+});
+
+app.patch('/agent/leads/:id', agentAuth, async (req, res) => {
+  const result = await updateLead(req.params.id, req.body || {});
+  if (!result) return res.status(404).json({ error: 'Lead no encontrado' });
+  res.json({ lead: result.lead });
+});
+
+app.delete('/agent/leads/:id', agentAuth, async (req, res) => {
+  const existing = (await readLeads()).find((item) => item.id === req.params.id);
+  if (!existing) return res.status(404).json({ error: 'Lead no encontrado' });
+  if (req.body?.confirm_name !== existing.name) return res.status(409).json({ error: 'confirm_name debe coincidir exactamente con el nombre del lead.' });
+  res.json({ ok: true, lead: await deleteLead(req.params.id) });
+});
+
+async function handleMcp(req, res) {
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
+  const server = createMcpServer();
+  res.on('close', () => transport.close());
+  await server.connect(transport);
+  await transport.handleRequest(req, res, req.body);
+}
+
+app.post('/mcp', agentAuth, validateMcpOrigin, handleMcp);
+app.get('/mcp', agentAuth, validateMcpOrigin, handleMcp);
 
 app.get('/api/leads', async (_req, res) => {
   const leads = await readLeads();
